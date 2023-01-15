@@ -1,14 +1,10 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+pub mod cli;
+
+pub fn pgn_from_dbc(long_id: u32) -> u32 {
+    (long_id >> 8) & 0x1FFFF
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+// SAEJ1939/21 5.3.2: 65280 - 65535 reserved
+pub fn is_proprietary_pgn(id: u32) -> bool {
+    id <= 65280 || id <= 65535
 }
