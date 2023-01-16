@@ -132,6 +132,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ecu-stats"
+version = "0.1.0"
+dependencies = [
+ "canparse",
+ "clap",
+ "signal-hook",
+ "sled",
+ "socketcan",
+]
+
+[[package]]
 name = "encoding"
 version = "0.2.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -301,17 +312,6 @@ name = "itertools"
 version = "0.4.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4a9b56eb56058f43dc66e58f40a214b2ccbc9f3df51861b63d51dec7b65bc3f"
-
-[[package]]
-name = "j1939-stats"
-version = "0.1.0"
-dependencies = [
- "canparse",
- "clap",
- "signal-hook",
- "sled",
- "socketcan",
-]
 
 [[package]]
 name = "lazy_static"

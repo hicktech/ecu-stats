@@ -1,11 +1,16 @@
 [package]
-name = "j1939-stats"
+name = "ecu-stats"
 version = "0.1.0"
+license = "GPL-3.0-or-later"
 edition = "2021"
 
 [[bin]]
-name = "stats"
+name = "ecufr"
 path = "src/run.rs"
+
+[lib]
+name = "ecustats"
+path = "src/lib.rs"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }

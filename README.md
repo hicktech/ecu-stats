@@ -1,17 +1,19 @@
-J1939 Stats
+ECU statistics
 ===
 
-Generate statistics from the J1939 bus.
+Capture and generate statistics from vehicle electronic control units (ECUs).
+
+Captures events from the CAN bus using [SocketCAN](https://docs.kernel.org/networking/can.html).
 
 Journals events to disk with [sled](https://github.com/spacejam/sled).
 
-## crate: ecmstats
+## crate: ECU Stats (ecustats)
 
-Accumulate and watch J1939 ECM data.
+Accumulate and watch ECU data.
 
-## tool: ECM Flight Recorder (ecmfr)
+## tool: ECU Flight Recorder (ecufr)
 
-A flight recorder for J1939 ECM data.
+A flight recorder for ECU data.
 
 ### Commands
 
@@ -19,6 +21,10 @@ A flight recorder for J1939 ECM data.
 - Play
 - Dump
 - Count
+
+## About the DBC file
+
+Not provided here.
 
 ## License
 

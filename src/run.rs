@@ -1,7 +1,8 @@
 use canparse::pgn::PgnLibrary;
 use clap::Parser;
-use j1939_stats::cli::{CountOpts, DumpOpts, Opts, PlaybackOpts, RecordingOpts, Subcommand};
-use j1939_stats::{is_proprietary_pgn, pgn_from_dbc};
+use ecustats::cli::Subcommand::*;
+use ecustats::cli::*;
+use ecustats::{is_proprietary_pgn, pgn_from_dbc};
 use signal_hook::consts::SIGINT;
 use socketcan::{CANFrame, ShouldRetry};
 use std::error::Error;
@@ -107,10 +108,10 @@ fn main() -> Res {
     let all_opts: Opts = Opts::parse();
 
     match all_opts.cmd {
-        Subcommand::Rec(opts) => record(opts)?,
-        Subcommand::Play(opts) => playback(opts)?,
-        Subcommand::Dump(opts) => dump(opts)?,
-        Subcommand::Count(opts) => count(opts)?,
+        Rec(opts) => record(opts)?,
+        Play(opts) => playback(opts)?,
+        Dump(opts) => dump(opts)?,
+        Count(opts) => count(opts)?,
     }
 
     Ok(())
