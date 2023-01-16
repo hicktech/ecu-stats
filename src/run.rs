@@ -1,10 +1,11 @@
 use canparse::pgn::PgnLibrary;
 use clap::Parser;
-use j1939_stats::cli::{DumpOpts, Opts, PlaybackOpts, RecordingOpts, Subcommand};
+use j1939_stats::cli::{CountOpts, DumpOpts, Opts, PlaybackOpts, RecordingOpts, Subcommand};
 use j1939_stats::{is_proprietary_pgn, pgn_from_dbc};
 use signal_hook::consts::SIGINT;
-use socketcan::CANFrame;
+use socketcan::{CANFrame, ShouldRetry};
 use std::error::Error;
+use std::io::ErrorKind::Interrupted;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::sleep;
@@ -14,6 +15,8 @@ type Res = Result<(), Box<dyn Error>>;
 
 fn record(opts: RecordingOpts) -> Res {
     let can = socketcan::CANSocket::open(&opts.socket).expect("open can");
+    can.set_read_timeout(Duration::from_secs(1)).unwrap();
+
     let db: sled::Db = sled::open(opts.journal).unwrap();
 
     let term = Arc::new(AtomicBool::new(false));
@@ -23,7 +26,12 @@ fn record(opts: RecordingOpts) -> Res {
 
     let mut i = 0;
     while !term.load(Ordering::Relaxed) {
-        let f = can.read_frame().unwrap();
+        let f = match can.read_frame() {
+            Ok(f) => f,
+            Err(e) if e.should_retry() => continue,
+            Err(e) if e.kind() == Interrupted => continue,
+            Err(e) => return Err(Box::new(e)),
+        };
 
         let k = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -88,6 +96,13 @@ fn dump(opts: DumpOpts) -> Res {
     Ok(())
 }
 
+fn count(opts: CountOpts) -> Res {
+    let db: sled::Db = sled::open(opts.journal).unwrap();
+    let c = db.iter().count();
+    println!("{c}");
+    Ok(())
+}
+
 fn main() -> Res {
     let all_opts: Opts = Opts::parse();
 
@@ -95,6 +110,7 @@ fn main() -> Res {
         Subcommand::Rec(opts) => record(opts)?,
         Subcommand::Play(opts) => playback(opts)?,
         Subcommand::Dump(opts) => dump(opts)?,
+        Subcommand::Count(opts) => count(opts)?,
     }
 
     Ok(())

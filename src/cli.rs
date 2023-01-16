@@ -15,6 +15,8 @@ pub enum Subcommand {
     Play(PlaybackOpts),
     /// Display J1939 messages from journal
     Dump(DumpOpts),
+    /// Count events from journal
+    Count(CountOpts),
 }
 
 #[derive(Parser)]
@@ -53,6 +55,15 @@ pub struct DumpOpts {
 
     #[clap(default_value = "vcan0")]
     pub socket: String,
+
+    #[clap(short, long)]
+    pub journal: String,
+}
+
+#[derive(Parser)]
+pub struct CountOpts {
+    #[clap(long, default_value = "data/j1939_utf8.dbc")]
+    pub dbc: String,
 
     #[clap(short, long)]
     pub journal: String,
