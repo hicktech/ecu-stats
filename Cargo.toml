@@ -14,7 +14,7 @@ path = "src/lib.rs"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
-canparse = { version="0.1", features=["use-socketcan"] }
+canparse = { git="https://github.com/hicktech/canparse", features=["use-socketcan"] }
 socketcan = "1.7"
 sled = "0.34"
 signal-hook = "0.3"
