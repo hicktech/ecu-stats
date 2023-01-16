@@ -2,18 +2,29 @@ use canparse::pgn::PgnLibrary;
 use clap::Parser;
 use j1939_stats::cli::{DumpOpts, Opts, PlaybackOpts, RecordingOpts, Subcommand};
 use j1939_stats::{is_proprietary_pgn, pgn_from_dbc};
+use signal_hook::consts::SIGINT;
 use socketcan::CANFrame;
+use std::error::Error;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime};
 
-fn record(opts: RecordingOpts) {
+type Res = Result<(), Box<dyn Error>>;
+
+fn record(opts: RecordingOpts) -> Res {
     let can = socketcan::CANSocket::open(&opts.socket).expect("open can");
     let db: sled::Db = sled::open(opts.journal).unwrap();
+
+    let term = Arc::new(AtomicBool::new(false));
+    signal_hook::flag::register(SIGINT, Arc::clone(&term))?;
 
     eprintln!("Recording ...");
 
     let mut i = 0;
-    loop {
+    while !term.load(Ordering::Relaxed) {
+        let f = can.read_frame().unwrap();
+
         let k = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
@@ -21,7 +32,6 @@ fn record(opts: RecordingOpts) {
             .to_be_bytes();
 
         // format: [id][data]
-        let f = can.read_frame().unwrap();
         let id = f.id().to_be_bytes();
         let v = [id.as_slice(), f.data()].concat();
         db.insert(k, v).unwrap();
@@ -37,9 +47,10 @@ fn record(opts: RecordingOpts) {
     }
 
     eprintln!("Recorded {i} events");
+    Ok(())
 }
 
-fn playback(opts: PlaybackOpts) {
+fn playback(opts: PlaybackOpts) -> Res {
     let can = socketcan::CANSocket::open(&opts.socket).expect("open can");
     let db: sled::Db = sled::open(opts.journal).unwrap();
     for e in db.iter() {
@@ -52,9 +63,11 @@ fn playback(opts: PlaybackOpts) {
 
         sleep(Duration::from_millis(opts.delay));
     }
+
+    Ok(())
 }
 
-fn dump(opts: DumpOpts) {
+fn dump(opts: DumpOpts) -> Res {
     let db: sled::Db = sled::open(opts.journal).unwrap();
 
     let lib = PgnLibrary::from_dbc_file(opts.dbc).expect("open dbc");
@@ -71,14 +84,18 @@ fn dump(opts: DumpOpts) {
             _ => {}
         }
     }
+
+    Ok(())
 }
 
-fn main() {
+fn main() -> Res {
     let all_opts: Opts = Opts::parse();
 
     match all_opts.cmd {
-        Subcommand::Rec(opts) => record(opts),
-        Subcommand::Play(opts) => playback(opts),
-        Subcommand::Dump(opts) => dump(opts),
+        Subcommand::Rec(opts) => record(opts)?,
+        Subcommand::Play(opts) => playback(opts)?,
+        Subcommand::Dump(opts) => dump(opts)?,
     }
+
+    Ok(())
 }
