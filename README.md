@@ -26,6 +26,20 @@ A flight recorder for ECU data.
 
 Not provided here.
 
+## Cross compile
+
+```
+rustup target add armv7-unknown-linux-gnueabihf
+sudo apt install gcc-arm-linux-gnueabihf
+```
+
+Add the following entry to the Cargo config toml
+
+```
+[target.armv7-unknown-linux-gnueabihf]
+linker = "arm-linux-gnueabihf-gcc"
+```
+
 ## License
 
 GPL v3
