@@ -49,7 +49,7 @@ fn record(opts: RecordingOpts) -> Res {
         eprint!("{i}\r");
 
         if let Some(c) = opts.count {
-            if !(i < c) {
+            if i >= c {
                 break;
             }
         }
