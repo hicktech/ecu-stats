@@ -28,9 +28,15 @@ pub struct RecordingOpts {
     #[clap(short, long)]
     pub journal: String,
 
-    /// Record number of events before exiting
+    /// Limit number of recorded events
     #[clap(short, long)]
-    pub count: Option<usize>,
+    pub limit: Option<usize>,
+
+    /// Compression factor (1-22)
+    /// Uses zstd compression.
+    /// Ranges from 1 up to 22. Levels >= 20 are ‘ultra’.
+    #[clap(short, long)]
+    pub compression: Option<i32>,
 }
 
 #[derive(Parser)]

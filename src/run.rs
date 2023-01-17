@@ -19,7 +19,16 @@ fn record(opts: RecordingOpts) -> Res {
     let can = socketcan::CANSocket::open(&opts.socket).expect("open can");
     can.set_read_timeout(Duration::from_secs(1)).unwrap();
 
-    let db: sled::Db = sled::open(opts.journal).unwrap();
+    let db = if let Some(c) = opts.compression {
+        sled::Config::default()
+            .path(opts.journal)
+            .use_compression(true)
+            .compression_factor(c)
+            .open()
+            .unwrap()
+    } else {
+        sled::open(opts.journal).unwrap()
+    };
 
     let term = Arc::new(AtomicBool::new(false));
     signal_hook::flag::register(SIGINT, Arc::clone(&term))?;
@@ -56,7 +65,7 @@ fn record(opts: RecordingOpts) -> Res {
         i += 1;
         eprint!("\rRecording {i}\r");
 
-        if let Some(c) = opts.count {
+        if let Some(c) = opts.limit {
             if i >= c {
                 break;
             }
