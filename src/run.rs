@@ -4,10 +4,7 @@ use ecustats::cli::Subcommand::*;
 use ecustats::cli::*;
 use ecustats::{is_proprietary_pgn, pgn_from_dbc};
 use signal_hook::consts::SIGINT;
-use sled::Tree;
 use socketcan::{CANFrame, ShouldRetry};
-use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::collections::HashMap;
 use std::error::Error;
 use std::io::ErrorKind::Interrupted;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -16,7 +13,7 @@ use std::thread::sleep;
 use std::time::{Duration, SystemTime};
 
 type Res = Result<(), Box<dyn Error>>;
-type Forest = HashMap<u32, Tree>;
+const PID_SZ: usize = std::mem::size_of::<u32>();
 
 fn record(opts: RecordingOpts) -> Res {
     let can = socketcan::CANSocket::open(&opts.socket).expect("open can");
@@ -29,7 +26,6 @@ fn record(opts: RecordingOpts) -> Res {
 
     eprint!("Recording ...");
 
-    let mut trees = Forest::new();
     let mut i = 0;
     while !term.load(Ordering::Relaxed) {
         let f = match can.read_frame() {
@@ -53,10 +49,8 @@ fn record(opts: RecordingOpts) -> Res {
         let v = [cid.as_slice(), f.data()].concat();
         db.insert(k, &*v).unwrap();
 
-        let tree = match trees.entry(pid) {
-            Occupied(e) => e.get().clone(),
-            Vacant(e) => e.insert(db.open_tree(pid.to_be_bytes()).unwrap()).clone(),
-        };
+        // [pid] -> [t] -> [id][data]
+        let tree = db.open_tree(pid.to_be_bytes()).unwrap();
         tree.insert(k, &*v).unwrap();
 
         i += 1;
@@ -81,7 +75,7 @@ fn playback(opts: PlaybackOpts) -> Res {
     let db: sled::Db = sled::open(opts.journal).unwrap();
     for e in db.iter() {
         let (_, b) = e.unwrap();
-        let (id, data) = b.split_at(std::mem::size_of::<u32>());
+        let (id, data) = b.split_at(PID_SZ);
         let id = u32::from_be_bytes(id.try_into().unwrap());
 
         let frame = CANFrame::new(id, data, false, false).unwrap();
@@ -94,9 +88,16 @@ fn playback(opts: PlaybackOpts) -> Res {
 }
 
 fn dump(opts: DumpOpts) -> Res {
-    let db: sled::Db = sled::open(opts.journal).unwrap();
-
     let lib = PgnLibrary::from_dbc_file(opts.dbc).expect("open dbc");
+    let db: sled::Db = sled::open(opts.journal).unwrap();
+    match opts.from {
+        DumpType::All => dump_all(&db, &lib),
+        DumpType::PGNs => dump_pgns(&db, &lib),
+    };
+    Ok(())
+}
+
+fn dump_all(db: &sled::Db, lib: &PgnLibrary) {
     for e in db.iter() {
         let (t, b) = e.unwrap();
         let (id, _) = b.split_at(std::mem::size_of::<u32>());
@@ -110,8 +111,17 @@ fn dump(opts: DumpOpts) -> Res {
             _ => {}
         }
     }
+}
 
-    Ok(())
+fn dump_pgns(db: &sled::Db, lib: &PgnLibrary) {
+    for id in db.tree_names().iter().filter(|n| n.len() == PID_SZ) {
+        let pid = u32::from_be_bytes(id.as_ref().try_into().unwrap());
+        match lib.get_pgn(pid) {
+            Some(pgn) => println!("{}", pgn.description),
+            None if !is_proprietary_pgn(pid) => eprintln!("Unknown: {pid}"),
+            _ => {}
+        }
+    }
 }
 
 fn count(opts: CountOpts) -> Res {

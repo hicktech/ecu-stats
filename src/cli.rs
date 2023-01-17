@@ -1,4 +1,5 @@
 use clap::Parser;
+use std::str::FromStr;
 
 #[derive(Parser)]
 #[clap(name = "J1939 Stats")]
@@ -50,6 +51,8 @@ pub struct PlaybackOpts {
 
 #[derive(Parser)]
 pub struct DumpOpts {
+    pub from: DumpType,
+
     #[clap(long, default_value = "data/j1939_utf8.dbc")]
     pub dbc: String,
 
@@ -60,6 +63,12 @@ pub struct DumpOpts {
     pub journal: String,
 }
 
+#[derive(Debug, Clone)]
+pub enum DumpType {
+    All,
+    PGNs,
+}
+
 #[derive(Parser)]
 pub struct CountOpts {
     #[clap(long, default_value = "data/j1939_utf8.dbc")]
@@ -67,4 +76,19 @@ pub struct CountOpts {
 
     #[clap(short, long)]
     pub journal: String,
+
+    /// Filter by PGN
+    pub pgn: Option<u32>,
+}
+
+impl FromStr for DumpType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "all" => Ok(DumpType::All),
+            "pgns" => Ok(DumpType::PGNs),
+            x => Err(format!("{} is not supported", x)),
+        }
+    }
 }
