@@ -18,7 +18,7 @@ jobs:
         rust: [ stable ]
         props:
           - {
-            os: ubuntu-latest,
+            os: ubuntu-18.04,
             target: armv7-unknown-linux-gnueabihf,
             artifact_prefix: linux,
           }
