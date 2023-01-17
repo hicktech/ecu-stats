@@ -74,7 +74,7 @@ fn record(opts: RecordingOpts) -> Res {
 
     eprintln!(
         "\rRecorded {i} events across {} PGNs",
-        db.tree_names().iter().count()
+        db.tree_names().len()
     );
     Ok(())
 }
