@@ -4,7 +4,10 @@ use ecustats::cli::Subcommand::*;
 use ecustats::cli::*;
 use ecustats::{is_proprietary_pgn, pgn_from_dbc};
 use signal_hook::consts::SIGINT;
+use sled::Tree;
 use socketcan::{CANFrame, ShouldRetry};
+use std::collections::hash_map::Entry::{Occupied, Vacant};
+use std::collections::HashMap;
 use std::error::Error;
 use std::io::ErrorKind::Interrupted;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -13,6 +16,7 @@ use std::thread::sleep;
 use std::time::{Duration, SystemTime};
 
 type Res = Result<(), Box<dyn Error>>;
+type Forest = HashMap<u32, Tree>;
 
 fn record(opts: RecordingOpts) -> Res {
     let can = socketcan::CANSocket::open(&opts.socket).expect("open can");
@@ -23,8 +27,9 @@ fn record(opts: RecordingOpts) -> Res {
     let term = Arc::new(AtomicBool::new(false));
     signal_hook::flag::register(SIGINT, Arc::clone(&term))?;
 
-    eprintln!("Recording ...");
+    eprint!("Recording ...");
 
+    let mut trees = Forest::new();
     let mut i = 0;
     while !term.load(Ordering::Relaxed) {
         let f = match can.read_frame() {
@@ -40,13 +45,22 @@ fn record(opts: RecordingOpts) -> Res {
             .as_micros()
             .to_be_bytes();
 
-        // format: [id][data]
-        let id = f.id().to_be_bytes();
-        let v = [id.as_slice(), f.data()].concat();
-        db.insert(k, v).unwrap();
+        let fid = f.id();
+        let cid = fid.to_be_bytes();
+        let pid = pgn_from_dbc(f.id());
+
+        // [t] -> [id][data]
+        let v = [cid.as_slice(), f.data()].concat();
+        db.insert(k, &*v).unwrap();
+
+        let tree = match trees.entry(pid) {
+            Occupied(e) => e.get().clone(),
+            Vacant(e) => e.insert(db.open_tree(pid.to_be_bytes()).unwrap()).clone(),
+        };
+        tree.insert(k, &*v).unwrap();
 
         i += 1;
-        eprint!("{i}\r");
+        eprint!("\rRecording {i}\r");
 
         if let Some(c) = opts.count {
             if i >= c {
@@ -55,7 +69,10 @@ fn record(opts: RecordingOpts) -> Res {
         }
     }
 
-    eprintln!("Recorded {i} events");
+    eprintln!(
+        "\rRecorded {i} events across {} PGNs",
+        db.tree_names().iter().count()
+    );
     Ok(())
 }
 
@@ -98,8 +115,11 @@ fn dump(opts: DumpOpts) -> Res {
 }
 
 fn count(opts: CountOpts) -> Res {
-    let db: sled::Db = sled::open(opts.journal).unwrap();
-    let c = db.iter().count();
+    let db = sled::open(opts.journal).unwrap();
+    let c = match opts.pgn {
+        Some(id) => db.open_tree(id.to_be_bytes()).unwrap().iter().count(),
+        None => db.iter().count(),
+    };
     println!("{c}");
     Ok(())
 }
