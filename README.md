@@ -17,27 +17,20 @@ A flight recorder for ECU data.
 
 ### Commands
 
-- Record
-- Play
-- Dump
-- Count
+- Record - journal events from can to disk
+- Play   - play events from disk to can
+- Dump   - dump event description to stdout
+- Count  - count events and pgns
 
 ## About the DBC file
 
-Not provided here.
+It is not provided.
 
 ## Cross compile
 
 ```
 rustup target add armv7-unknown-linux-gnueabihf
 sudo apt install gcc-arm-linux-gnueabihf
-```
-
-Add the following entry to the Cargo config toml
-
-```
-[target.armv7-unknown-linux-gnueabihf]
-linker = "arm-linux-gnueabihf-gcc"
 ```
 
 ## License
