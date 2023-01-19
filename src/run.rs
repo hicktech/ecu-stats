@@ -126,7 +126,7 @@ fn dump_pgns(db: &sled::Db, lib: &PgnLibrary) {
     for id in db.tree_names().iter().filter(|n| n.len() == PID_SZ) {
         let pid = u32::from_be_bytes(id.as_ref().try_into().unwrap());
         match lib.get_pgn(pid) {
-            Some(pgn) => println!("{}", pgn.description),
+            Some(pgn) => println!("{} {}", pid, pgn.description),
             None if !is_proprietary_pgn(pid) => eprintln!("Unknown: {pid}"),
             _ => {}
         }
