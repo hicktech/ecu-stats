@@ -15,16 +15,18 @@ Accumulate and watch ECU data.
 
 A flight recorder for ECU data.
 
-### Commands
-
 - Record - journal events from can to disk
 - Play   - play events from disk to can
 - Dump   - dump event description to stdout
 - Count  - count events and pgns
 
-## About the DBC file
+## Standards
 
-It is not provided.
+- J1939 via CAN bus
+
+## About the J1939 DBC file
+
+Bring your own, it is not provided.
 
 ## Cross compile
 
@@ -32,6 +34,9 @@ It is not provided.
 rustup target add armv7-unknown-linux-gnueabihf
 sudo apt install gcc-arm-linux-gnueabihf
 ```
+
+## Reference
+- https://www.csselectronics.com/pages/j1939-explained-simple-intro-tutorial
 
 ## License
 
